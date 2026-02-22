@@ -21,7 +21,7 @@ st.caption("Discord通知連携版（回数制限なし・完全無料）")
 st.sidebar.header("通知設定")
 ticker = st.sidebar.text_input("銘柄コード (例: 7203.T, NVDA)", "7203.T")
 target_price = st.sidebar.number_input("通知する価格 (この価格を超えたら通知)", value=2500.0)
-discord_webhook_url = st.sidebar.text_input("Discord Webhook URLを入力", type="password")
+discord_webhook_url = st.sidebar.text_input("Discord Webhook URLを入力", type="password",value="https://discord.com/api/webhooks/1475247790740472082/kIEUBfekla14HL95bOiVxOPYwJkZWhrcoDy-3ZtZ-n8puOjBA8xLpjAnmRMljv5XX7mE")
 
 # セッション状態で「通知済みフラグ」を管理（同じ価格での連投防止）
 if 'last_notified_price' not in st.session_state:
