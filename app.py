@@ -4,31 +4,45 @@ import pandas as pd
 
 st.title("📈 リアルタイム株価モニター")
 
-ticker = st.sidebar.text_input("ティッカーシンボルを入力 (例: 7203.T, AAPL)", "7203.T")
+# サイドバーの設定
+ticker_input = st.sidebar.text_input("ティッカーシンボルを入力 (例: 7203.T, AAPL)", "7203.T")
 
-# 修正ポイント1: データの取得方法をより確実に
-# auto_adjust=True, multi_level_download=False を追加してデータを平坦化します
-data = yf.download(ticker, period="1d", interval="1m", auto_adjust=True, multi_level_download=False)
+# 1. Tickerオブジェクトを作成（downloadよりこちらが安定します）
+stock = yf.Ticker(ticker_input)
 
-if not data.empty:
+# 2. 履歴データの取得 (period="1d", interval="1m" で今日の1分足)
+# ※市場が閉まっている時間はデータが空になるため、念のため1dではなく5dにするのも手です
+df = stock.history(period="1d", interval="1m")
+
+if not df.empty:
     try:
-        # 修正ポイント2: 最新の終値を抽出し、強制的に数値(float)に変換
-        # data['Close']がSeries（列）なので、最後の1要素を数値として取り出します
-        latest_price_raw = data['Close'].iloc[-1]
+        # 最新の終値を取得
+        # history()で取得したデータは列が「Close」のみのシンプルな構造になります
+        latest_price = df['Close'].iloc[-1]
         
-        # 万が一、配列で返ってきた場合でも最初の1つを取る処理
-        if isinstance(latest_price_raw, pd.Series):
-            latest_price = float(latest_price_raw.iloc[0])
-        else:
-            latest_price = float(latest_price_raw)
+        # 前日終値からの変化率（おまけ機能）
+        prev_close = df['Close'].iloc[0]
+        delta = latest_price - prev_close
 
-        # 表示
-        st.metric(label=f"{ticker} の現在値", value=f"{latest_price:,.2f} JPY")
+        # メトリクスの表示
+        st.metric(
+            label=f"{ticker_input} の現在値", 
+            value=f"{latest_price:,.2f} JPY",
+            delta=f"{delta:,.2f}"
+        )
 
+        # チャートの表示
         st.subheader("本日の値動き (1分足)")
-        st.line_chart(data['Close'])
+        st.line_chart(df['Close'])
         
+        # データの確認用
+        with st.expander("取得した生データを確認"):
+            st.write(df.tail())
+
     except Exception as e:
-        st.error(f"データの解析中にエラーが発生しました: {e}")
+        st.error(f"表示エラー: {e}")
 else:
-    st.error("データが取得できませんでした。シンボルが正しいか、または市場が閉まっていないか確認してください。")
+    st.warning("データが取得できませんでした。以下の原因が考えられます：")
+    st.write("1. ティッカーシンボルが間違っている（日本株は末尾に .T が必要）")
+    st.write("2. 現在、市場が閉まっていて1分足のデータが存在しない（土日など）")
+    st.write("3. Yahoo Financeのサーバー制限")
